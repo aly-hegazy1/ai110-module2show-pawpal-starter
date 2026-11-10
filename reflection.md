@@ -73,13 +73,23 @@ I think that's the right call here. For pet care, "most important things first" 
 
 **a. What you tested**
 
-- What behaviors did you test?
-- Why were these tests important?
+I tested five areas: task and pet basics plus input validation, sorting, filtering, recurrence, conflict detection, and the budget-limited daily plan (30 tests in all, listed in the README).
+
+The most valuable tests were the **edge cases at boundaries**:
+
+- *Back-to-back tasks*: a walk from 08:00 to 08:30 followed by a feeding at 08:30 must **not** count as a conflict. This test pins down that the overlap check uses `>=` and not `>`.
+- *Sorting across days*: this test came from a bug I actually hit in the demo. Tomorrow's recurring 07:30 walk was sorting ahead of today's 18:00 task, because the sort only looked at the time. Fixing the key to `(due_date, time)` and adding this test keeps it from coming back.
+- *Recurrence creates an independent copy*: if the "next" task shared state with the original, completing one would affect the other.
+
+These matter because the scheduler's job is to be trusted. If the owner sees a false conflict warning, or a missing medication, they'll stop using the app.
 
 **b. Confidence**
 
-- How confident are you that your scheduler works correctly?
-- What edge cases would you test next if you had more time?
+Fairly confident (4/5). All 30 tests pass, and each scheduling rule has a happy-path test and at least one edge case. Next I would test:
+
+- Tasks that run past midnight (a 23:30 task lasting 60 minutes). Right now the end time just goes past 24:00 and isn't wrapped onto the next day.
+- Completing the same recurring task twice. Right now that would create two "tomorrow" copies.
+- The Streamlit UI itself, using `streamlit.testing.v1.AppTest`, so the forms and session state are covered automatically instead of only by hand.
 
 ---
 

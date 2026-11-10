@@ -57,19 +57,37 @@ Today's Schedule for Jordan
 
 ## 🧪 Testing PawPal+
 
-```bash
-# Run the full test suite:
-pytest
+Run the suite from the project root:
 
-# Run with coverage:
-pytest --cov
+```bash
+python -m pytest
 ```
+
+`tests/test_pawpal.py` has 30 tests covering:
+
+- **Basics.** `mark_complete()` flips the status, adding and removing tasks changes a pet's task count, `Owner` collects tasks across all pets and rejects duplicate pet names.
+- **Validation.** Bad times (`"25:00"`, `"noon"`), unknown priorities or frequencies, and non-positive durations raise `ValueError`. `"7:05"` is normalized to `"07:05"`.
+- **Sorting.** Tasks come back in chronological order even when added out of order. Tomorrow's tasks sort after today's. Equal priorities are tie-broken by time. An empty schedule returns an empty list.
+- **Filtering.** By pet name (case-insensitive), by completed or not completed, and an unknown pet returns nothing.
+- **Recurrence.** Completing a daily task adds a new, incomplete copy due tomorrow. A weekly task's copy is due in 7 days. A one-time task doesn't recur. The new copy is independent of the original.
+- **Conflict detection.** Identical start times are flagged, overlapping durations for the same pet are flagged, back-to-back tasks (08:00–08:30 then 08:30) are *not* flagged, completed and other-day tasks are ignored, and one long task can conflict with several others.
+- **Daily plan.** High-priority tasks win when time is short, the plan never exceeds the owner's budget, skipped tasks are explained, and completed tasks or empty schedules give an empty plan.
 
 Sample test output:
 
 ```
-# Paste your pytest output here
+============================= test session starts ==============================
+platform darwin -- Python 3.13.9, pytest-9.1.1, pluggy-1.5.0
+rootdir: /Users/alyhegazy/Desktop/CodePath /ai110-module2show-pawpal-starter
+plugins: anyio-4.15.1
+collected 30 items
+
+tests/test_pawpal.py ..............................                      [100%]
+
+============================== 30 passed in 0.02s ==============================
 ```
+
+**Confidence level: ★★★★☆ (4/5).** Every scheduling rule has a test, including the edge cases I could think of (empty schedules, exact-time ties, back-to-back tasks). I'm holding back one star because the Streamlit UI is only checked by hand, and the planner's greedy choice isn't compared against an optimal plan.
 
 ## 📐 Smarter Scheduling
 
