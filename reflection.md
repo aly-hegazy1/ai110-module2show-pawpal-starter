@@ -21,8 +21,12 @@ Relationships: an Owner *has* many Pets (aggregation), a Pet *owns* many Tasks (
 
 **b. Design changes**
 
-- Did your design change during implementation?
-- If yes, describe at least one change and why you made it.
+Yes. When I asked the AI to review the skeleton, it pointed out two gaps, and I agreed with both:
+
+1. **Tasks didn't know which pet they belonged to.** `Owner.get_all_tasks()` returns one flat list, so the schedule couldn't say "Mochi: Morning walk" and a conflict warning couldn't name the pets involved. I added a `pet_name` field to `Task`. `Pet.add_task()` fills it in automatically, so the user never has to type it twice.
+2. **Tasks had no date.** Without one, a recurring task can't be rescheduled for "tomorrow," and "today's schedule" can't be told apart from next week's. I added a `due_date` field that defaults to today.
+
+I also added `Owner.get_pet(name)` so the UI and the Scheduler can find a pet by name instead of scanning the list themselves. `add_pet()` now rejects duplicate names, since names are how pets get looked up.
 
 ---
 
