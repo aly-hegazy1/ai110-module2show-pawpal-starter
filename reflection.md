@@ -34,13 +34,24 @@ I also added `Owner.get_pet(name)` so the UI and the Scheduler can find a pet by
 
 **a. Constraints and priorities**
 
-- What constraints does your scheduler consider (for example: time, priority, preferences)?
-- How did you decide which constraints mattered most?
+The scheduler considers four things:
+
+- **Time of day.** Every task has an `HH:MM` start time, and the schedule is always shown in that order.
+- **Priority** (high, medium, low). It decides which tasks make it into the day when time is short.
+- **The owner's time budget** (`Owner.available_minutes`). The daily plan never schedules more minutes than the owner has.
+- **Completion and due date.** Finished tasks and tasks due on other days are left out of today's plan.
+
+I treated priority as the main constraint. A missed medication or meal matters much more than a missed puzzle-toy session, so the planner fills the budget with high-priority tasks first. Time of day decides the order tasks are *shown* in, but not which ones get *chosen*.
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+**The planner is greedy, not optimal.** `generate_daily_plan()` goes down the list by priority and keeps each task that still fits in the remaining minutes. It never goes back to try a different combination. That means it can leave time unused. With 25 minutes left and two 15-minute low-priority tasks plus one 20-minute task ahead of them, it takes the 20-minute task and then can't fit either 15-minute one. A knapsack-style search could pack the time better.
+
+I think that's the right call here. For pet care, "most important things first" is what an owner would do themselves, and it's easy to explain in one sentence. A plan that is technically more efficient but drops a medication to fit two play sessions would be worse.
+
+**Conflicts are warnings, not blockers.** `detect_conflicts()` checks real overlapping time windows (start + duration), not just identical start times. But it only *reports* the overlaps. It doesn't move tasks around. Some overlaps are fine in practice (you can put the cat's food down while the dog is on a walk), so the owner decides, not the code.
+
+**Comparing with the AI's suggestion.** When I asked how to simplify `detect_conflicts()`, the AI suggested `itertools.combinations(tasks, 2)` to check every pair in one line. That's shorter, but it always checks all n² pairs. I kept my version, which sorts first and `break`s out of the inner loop once a later task starts after the current one ends. It's still easy to read, and the comment explains the early exit.
 
 ---
 

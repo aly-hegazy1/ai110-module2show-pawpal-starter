@@ -73,14 +73,16 @@ Sample test output:
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
+All scheduling logic lives in `Scheduler` in `pawpal_system.py`.
 
-| Feature | Method(s) | Notes |
-|---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Feature | Method(s) | How it works |
+|---------|-----------|--------------|
+| Sorting by time | `Scheduler.sort_by_time()` | `sorted()` with a lambda key of `(due_date, minutes after midnight)`, so `"07:30"` comes before `"18:00"` and tomorrow's tasks come after today's. Times are normalized to zero-padded `HH:MM` when a `Task` is created. |
+| Sorting by priority | `Scheduler.sort_by_priority()` | Orders high → medium → low, then by time. Used by the daily planner. |
+| Filtering | `Scheduler.filter_tasks(pet_name=, completed=)` | Keeps tasks matching a pet name (case-insensitive) and/or completion status. Passing `None` means "don't filter on this." `get_tasks_for_date()` filters by due date. |
+| Recurring tasks | `Scheduler.mark_task_complete()`, `Task.next_occurrence()` | Completing a `daily` or `weekly` task creates a fresh copy due `today + timedelta(days=1)` or `+ timedelta(weeks=1)` and adds it to the same pet. `once` tasks just get marked done. |
+| Conflict detection | `Scheduler.detect_conflicts()` | Sorts the day's unfinished tasks by start time and flags any pair whose `[start, start + duration)` windows overlap, for the same pet or different pets. It returns warning strings instead of raising, so the app keeps running. |
+| Daily plan within a time budget | `Scheduler.generate_daily_plan()` → `DailyPlan` | Greedy: takes unfinished tasks for the day in priority order and keeps each one that still fits in `Owner.available_minutes`. `DailyPlan.explain()` says why each task was kept or skipped. |
 
 ## 📸 Demo Walkthrough
 
