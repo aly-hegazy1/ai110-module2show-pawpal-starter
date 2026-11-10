@@ -1,15 +1,68 @@
 classDiagram
-    %% Replace the placeholders below with your actual classes, attributes, methods, and relationships.
-    %% Keep this file updated so it matches your final implementation.
+    %% PawPal+ final design — matches pawpal_system.py
 
-    class ClassName {
-        +type attribute
-        +method() returnType
+    class Task {
+        <<dataclass>>
+        +str description
+        +str time
+        +int duration_minutes
+        +str priority
+        +str frequency
+        +date due_date
+        +bool completed
+        +str pet_name
+        +start_minutes int
+        +end_minutes int
+        +mark_complete() None
+        +next_occurrence() Task | None
     }
 
-    class AnotherClass {
-        +type attribute
-        +method() returnType
+    class Pet {
+        <<dataclass>>
+        +str name
+        +str species
+        +int age
+        +list~Task~ tasks
+        +add_task(task) None
+        +remove_task(task) None
+        +task_count() int
     }
 
-    ClassName --> AnotherClass : relationship
+    class Owner {
+        +str name
+        +int available_minutes
+        +list~Pet~ pets
+        +add_pet(pet) None
+        +get_pet(name) Pet | None
+        +get_all_tasks() list~Task~
+    }
+
+    class Scheduler {
+        +Owner owner
+        +get_all_tasks() list~Task~
+        +sort_by_time(tasks) list~Task~
+        +sort_by_priority(tasks) list~Task~
+        +filter_tasks(pet_name, completed, tasks) list~Task~
+        +get_tasks_for_date(day) list~Task~
+        +mark_task_complete(task) Task | None
+        +detect_conflicts(day) list~str~
+        +generate_daily_plan(day) DailyPlan
+    }
+
+    class DailyPlan {
+        <<dataclass>>
+        +date day
+        +int budget_minutes
+        +list~Task~ scheduled
+        +list~Task~ skipped
+        +minutes_used int
+        +explain() list~str~
+    }
+
+    Owner "1" o-- "*" Pet : has
+    Pet "1" *-- "*" Task : owns
+    Scheduler --> Owner : reads pets & tasks through
+    Scheduler ..> Task : sorts, filters, completes
+    Scheduler ..> DailyPlan : creates
+    DailyPlan --> "*" Task : scheduled / skipped
+    Task ..> Task : next_occurrence() creates

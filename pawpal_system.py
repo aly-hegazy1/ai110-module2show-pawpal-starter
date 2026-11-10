@@ -211,7 +211,13 @@ class Scheduler:
     # ----- recurring tasks ------------------------------------------------
 
     def mark_task_complete(self, task: Task) -> Task | None:
-        """Complete a task; for daily/weekly tasks, add and return the next occurrence."""
+        """Complete a task; for daily/weekly tasks, add and return the next occurrence.
+
+        Completing an already-completed task does nothing and returns None, so a
+        double-click can't create duplicate future tasks.
+        """
+        if task.completed:
+            return None
         task.mark_complete()
         next_task = task.next_occurrence()
         if next_task is not None:

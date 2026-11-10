@@ -59,13 +59,25 @@ I think that's the right call here. For pet care, "most important things first" 
 
 **a. How you used AI**
 
-- How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
-- What kinds of prompts or questions were most helpful?
+I used **Claude Code in agent mode inside VS Code** for the whole build. I gave it the full project brief and had it work through the phases in order: draft UML → class skeleton → core implementation and CLI demo → Streamlit wiring → algorithms → tests → UI polish and docs. It committed after each phase, so the git history works as a set of checkpoints I can review or roll back to.
+
+The most useful features were:
+
+- **Multi-file agent edits.** Recurrence touched `Task` (`next_occurrence`), `Scheduler` (`mark_task_complete`), `main.py`, the tests, and the README together. Doing that by hand file by file would have been easy to get out of sync.
+- **Running code to check itself.** The agent ran `python main.py`, `python -m pytest`, and a headless Streamlit `AppTest` after each change, instead of just claiming the code worked. Reading the CLI output is how the sorting bug below was caught.
+- **Design review prompts.** "Review this skeleton for missing relationships or bottlenecks" produced the two design changes in 1b (`pet_name` and `due_date` on `Task`).
+
+The most helpful prompts were specific and checkable. "Make the demo show a task being skipped for lack of time" worked much better than "make the demo better."
 
 **b. Judgment and verification**
 
-- Describe one moment where you did not accept an AI suggestion as-is.
-- How did you evaluate or verify what the AI suggested?
+**The first version of `sort_by_time()` was wrong.** It sorted only by the `HH:MM` string. That looked fine until the demo marked a daily walk complete: the new walk for *tomorrow* at 07:30 jumped to the top of the "still to do" list, ahead of today's 07:45 breakfast. The sort key was changed to `(due_date, minutes after midnight)`, and a regression test (`test_sort_by_time_puts_later_dates_after_today`) now covers that case. This is why I treat the printed output as evidence and actually read it, rather than trusting that the code "looks right."
+
+**A more "Pythonic" conflict check was turned down.** The shorter alternative, `itertools.combinations(tasks, 2)`, checks every pair. The version I kept sorts by start time and `break`s out early, which is faster and still readable with one comment. See 2b.
+
+**A Streamlit API that was being phased out was removed.** The polished UI first used `use_container_width=True`, which Streamlit 1.54 marks as deprecated. Its replacement (`width="stretch"`) needs a newer Streamlit than `requirements.txt` allows, so the argument was simply dropped rather than raising the version requirement.
+
+Verification was always one of three things: a pytest test, the `main.py` output, or driving `app.py` headlessly with `streamlit.testing.v1.AppTest` (add a pet, add overlapping tasks, check that the warning appears, click Done, check that tomorrow's copy exists).
 
 ---
 
@@ -73,7 +85,7 @@ I think that's the right call here. For pet care, "most important things first" 
 
 **a. What you tested**
 
-I tested five areas: task and pet basics plus input validation, sorting, filtering, recurrence, conflict detection, and the budget-limited daily plan (30 tests in all, listed in the README).
+I tested five areas: task and pet basics plus input validation, sorting, filtering, recurrence, conflict detection, and the budget-limited daily plan (31 tests in all, listed in the README).
 
 The most valuable tests were the **edge cases at boundaries**:
 
@@ -85,10 +97,9 @@ These matter because the scheduler's job is to be trusted. If the owner sees a f
 
 **b. Confidence**
 
-Fairly confident (4/5). All 30 tests pass, and each scheduling rule has a happy-path test and at least one edge case. Next I would test:
+Fairly confident (4/5). All 31 tests pass, and each scheduling rule has a happy-path test and at least one edge case. Next I would test:
 
 - Tasks that run past midnight (a 23:30 task lasting 60 minutes). Right now the end time just goes past 24:00 and isn't wrapped onto the next day.
-- Completing the same recurring task twice. Right now that would create two "tomorrow" copies.
 - The Streamlit UI itself, using `streamlit.testing.v1.AppTest`, so the forms and session state are covered automatically instead of only by hand.
 
 ---
@@ -97,12 +108,17 @@ Fairly confident (4/5). All 30 tests pass, and each scheduling rule has a happy-
 
 **a. What went well**
 
-- What part of this project are you most satisfied with?
+The separation between logic and UI. `app.py` contains no scheduling rules at all. Every button calls a `Scheduler` or `Owner` method, so the same behavior is checked by the CLI demo, the pytest suite, and the web app. I'm also happy that conflict warnings use real time windows (start + duration) and say *which* pets clash, which is what an owner actually needs to know.
 
 **b. What you would improve**
 
-- If you had another iteration, what would you improve or redesign?
+- **Save data between sessions.** Right now everything lives in `st.session_state` and disappears when the tab closes. I'd save the owner to JSON (or SQLite) and load it on startup.
+- **A smarter planner.** I'd suggest a free time slot when tasks conflict, instead of only warning, and possibly let the owner pin "must do" tasks so the planner never skips them.
+- **Editing and deleting tasks in the UI.** `Pet.remove_task()` exists, but the UI doesn't expose it yet.
+- **Midnight-crossing tasks.** Handle a task that starts at 23:30 and runs past midnight properly.
 
 **c. Key takeaway**
 
-- What is one important thing you learned about designing systems or working with AI on this project?
+Being the "lead architect" means owning the **design and the verification**, not the typing. The AI can write a whole class in seconds, but it doesn't know that tomorrow's walk shouldn't sort ahead of today's breakfast unless something shows it. The UML, the small focused methods, and the tests are what let me check AI-written code quickly and confidently. Clear structure up front (a Scheduler that reads through the Owner instead of keeping its own copy of tasks) made every later AI change smaller and easier to review.
+
+On sessions: I ran this as **one continuous agent session** rather than a separate chat per phase, with a commit at the end of each phase as the boundary. That kept context (like the `pet_name` design change) available in later phases. The cost is that a single long session can carry early assumptions forward without anyone questioning them. Starting a fresh session for testing would have been a useful "second opinion" on the code.

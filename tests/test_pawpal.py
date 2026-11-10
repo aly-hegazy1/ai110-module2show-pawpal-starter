@@ -177,6 +177,15 @@ def test_completing_one_time_task_does_not_recur(household):
     assert dog.task_count() == 1
 
 
+def test_completing_twice_does_not_duplicate_next_occurrence(household):
+    _, dog, _, scheduler = household
+    walk = Task("Walk", "07:30", frequency="daily")
+    dog.add_task(walk)
+    scheduler.mark_task_complete(walk)
+    assert scheduler.mark_task_complete(walk) is None
+    assert dog.task_count() == 2
+
+
 def test_next_occurrence_is_independent_copy():
     walk = Task("Walk", "07:30", frequency="daily")
     copy = walk.next_occurrence()
